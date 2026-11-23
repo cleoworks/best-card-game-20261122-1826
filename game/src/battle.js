@@ -11,6 +11,7 @@
 import { DECK_LIST, makeCard, resetCardInstances } from './cards.js';
 
 export const MAX_LIFE = 30;
+export const WARDEN_LIFE = 34; // The Warden starts tougher than you: Burn must be earned, not free.
 export const START_HAND = 5;
 export const MAX_HAND = 8;
 export const MAX_EMBER_CAP = 10;
@@ -31,8 +32,8 @@ export function createBattle(random) {
   const state = {
     turn: 0,
     phase: PHASE.PLAYER,
-    player: { life: MAX_LIFE, block: 0 },
-    warden: { life: MAX_LIFE, block: 0, strength: 0, handCount: 5 },
+    player: { life: MAX_LIFE, maxLife: MAX_LIFE, block: 0 },
+    warden: { life: WARDEN_LIFE, maxLife: WARDEN_LIFE, block: 0, strength: 0, handCount: 5, burnTurns: 0 },
     emberCap: 0,
     ember: 0,
     deck,
@@ -118,6 +119,10 @@ export function createBattle(random) {
     if (card.kind === 'strike') {
       const lost = dealDamage('warden', card.value);
       logLine(`You play ${card.name}: ${lost} damage to the Warden.`);
+      if (card.id === 'emberStrike' && state.warden.life > 0) {
+        state.warden.burnTurns = 2;
+        logLine('The Warden catches fire: Burn 2 at its next 2 actions.');
+      }
     } else if (card.kind === 'guard') {
       state.player.block += card.value;
       logLine(`You play ${card.name}: +${card.value} Block.`);
@@ -142,6 +147,13 @@ export function createBattle(random) {
     if (state.phase !== PHASE.PLAYER) return;
     state.phase = PHASE.WARDEN;
     state.warden.block = 0; // Block from its last Ward guarded your whole turn; now it lapses.
+    if (state.warden.burnTurns > 0) {
+      state.warden.burnTurns -= 1;
+      state.warden.life = Math.max(0, state.warden.life - 2); // Burn ignores Block.
+      logLine('Burn sears the Warden for 2.');
+      checkEnd();
+      if (state.phase !== PHASE.WARDEN) return;
+    }
     const intent = state.intent;
     state.lastWardenCard = { name: intent.label, kind: intent.kind, value: intent.value };
     if (intent.kind === 'strike' || intent.kind === 'heavy') {

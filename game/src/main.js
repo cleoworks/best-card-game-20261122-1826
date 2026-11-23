@@ -124,7 +124,18 @@ if (shot) {
   const staged = stageShot(shot, createRandom(freshSeed()));
   battle = staged.battle;
   screen = staged.screen;
-  const view = { screen, state: battle.state, hover: null, fx: { floaters: [], playerCardAge: 99 }, time: 1.2 };
+  // The play frame is caught at the moment of impact: damage number still in the air,
+  // sparks still flying off the played card.
+  const shotFloaters = battle.state.shotDamage > 0
+    ? [{ x: 776, y: 218, text: `-${battle.state.shotDamage}`, color: '#ff9d5c', age: 0.35 }]
+    : [];
+  const view = {
+    screen,
+    state: battle.state,
+    hover: null,
+    fx: { floaters: shotFloaters, playerCardAge: shot === 'play' ? 0.16 : 99 },
+    time: 1.2,
+  };
   renderer.draw(view);
   renderer.draw(view);
   window.__shotReady = true;

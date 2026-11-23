@@ -15,7 +15,7 @@ export const SIGIL = {
 };
 
 export const CARDS = {
-  emberStrike: { id: 'emberStrike', name: 'Ember Strike', sigil: SIGIL.FLAME, cost: 1, value: 6, kind: 'strike', color: '#e8622c', text: 'Deal 6 damage.' },
+  emberStrike: { id: 'emberStrike', name: 'Ember Strike', sigil: SIGIL.FLAME, cost: 1, value: 6, kind: 'strike', color: '#e8622c', text: 'Deal 6 + Burn 2 for 2 turns.' },
   frostShard: { id: 'frostShard', name: 'Frost Shard', sigil: SIGIL.FROST, cost: 1, value: 5, kind: 'strike', color: '#57b7d6', text: 'Deal 5 damage.' },
   thornLash: { id: 'thornLash', name: 'Thorn Lash', sigil: SIGIL.THORN, cost: 2, value: 9, kind: 'strike', color: '#7fae4c', text: 'Deal 9 damage.' },
   guardStance: { id: 'guardStance', name: 'Guard Stance', sigil: SIGIL.SHIELD, cost: 1, value: 8, kind: 'guard', color: '#8d9bb5', text: 'Gain 8 Block.' },

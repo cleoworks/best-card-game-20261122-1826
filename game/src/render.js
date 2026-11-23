@@ -224,12 +224,58 @@ export function drawCardBack(ctx, x, y, w = 92, h = 132) {
   ctx.restore();
 }
 
-function drawLifeBar(ctx, x, y, w, life, color) {
+/** Drifting ember motes over the felt — fixed seeds, so a staged frame is reproducible. */
+const EMBERS = Array.from({ length: 26 }, (_, i) => ({
+  x: (i * 173) % 1280,
+  baseY: (i * 281) % 800,
+  speed: 9 + (i % 5) * 4,
+  sway: 14 + (i % 4) * 7,
+  phase: i * 1.37,
+  r: 1.4 + (i % 3) * 0.8,
+}));
+
+function drawEmbers(ctx, time) {
+  ctx.save();
+  for (const mote of EMBERS) {
+    const y = 800 - ((mote.baseY + time * mote.speed) % 820);
+    const x = mote.x + Math.sin(time * 0.7 + mote.phase) * mote.sway;
+    ctx.globalAlpha = 0.25 + 0.35 * (0.5 + 0.5 * Math.sin(time * 1.9 + mote.phase));
+    ctx.fillStyle = '#f5a83e';
+    ctx.beginPath();
+    ctx.arc(x, y, mote.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** Sparks bursting off the just-played card while its impact is fresh. */
+function drawImpactSparks(ctx, age) {
+  if (age >= 0.4) return;
+  ctx.save();
+  ctx.strokeStyle = '#ffcf6e';
+  ctx.lineWidth = 2.5;
+  ctx.lineCap = 'round';
+  const cx = 566;
+  const cy = 330;
+  for (let i = 0; i < 10; i += 1) {
+    const angle = (i / 10) * Math.PI * 2 + 0.35;
+    const inner = 26 + age * 60;
+    const outer = inner + 14 - age * 22;
+    ctx.globalAlpha = Math.max(0, 1 - age / 0.4);
+    ctx.beginPath();
+    ctx.moveTo(cx + Math.cos(angle) * inner, cy + Math.sin(angle) * inner);
+    ctx.lineTo(cx + Math.cos(angle) * outer, cy + Math.sin(angle) * outer);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawLifeBar(ctx, x, y, w, life, maxLife, color) {
   ctx.save();
   roundRect(ctx, x, y, w, 20, 10);
   ctx.fillStyle = 'rgba(0,0,0,0.55)'; ctx.fill();
   if (life > 0) {
-    roundRect(ctx, x + 2, y + 2, Math.max(14, (w - 4) * (life / MAX_LIFE)), 16, 8);
+    roundRect(ctx, x + 2, y + 2, Math.max(14, (w - 4) * (life / maxLife)), 16, 8);
     ctx.fillStyle = color; ctx.fill();
   }
   roundRect(ctx, x, y, w, 20, 10);
@@ -279,21 +325,21 @@ function drawWardenZone(ctx, state) {
   // Name plate + life.
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.42)';
-  roundRect(ctx, 36, 34, 356, 96, 12); ctx.fill();
+  roundRect(ctx, 36, 34, 356, 122, 12); ctx.fill();
   ctx.lineWidth = 1.5; ctx.strokeStyle = GOLD; ctx.stroke();
   drawFlame(ctx, 74, 82, 62, '#9aa3ad', '#e8eef2');
   ctx.fillStyle = '#e8e2d2';
   ctx.font = 'bold 19px Georgia, serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('THE ASHEN WARDEN', 116, 60);
-  drawLifeBar(ctx, 116, 78, 180, state.warden.life, '#b0483e');
+  drawLifeBar(ctx, 116, 78, 180, state.warden.life, state.warden.maxLife, '#b0483e');
   ctx.font = 'bold 25px Georgia, serif';
   ctx.fillStyle = '#ffb3a3';
   ctx.fillText(`${state.warden.life}`, 304, 88);
   const lifeWidth = ctx.measureText(`${state.warden.life}`).width;
   ctx.font = '12px Verdana, sans-serif';
   ctx.fillStyle = '#cbbfa4';
-  ctx.fillText(`/ ${MAX_LIFE} LIFE`, 304 + lifeWidth + 6, 90);
+  ctx.fillText(`/ ${state.warden.maxLife} LIFE`, 304 + lifeWidth + 6, 90);
   if (state.warden.block > 0) {
     ctx.font = 'bold 14px Verdana, sans-serif';
     ctx.fillStyle = '#aebfe0';
@@ -303,6 +349,15 @@ function drawWardenZone(ctx, state) {
     ctx.font = 'bold 13px Verdana, sans-serif';
     ctx.fillStyle = '#f0a35e';
     ctx.fillText(`STRENGTH +${state.warden.strength}`, 226, 118);
+  }
+  if (state.warden.burnTurns > 0) {
+    ctx.fillStyle = 'rgba(94,24,8,0.9)';
+    roundRect(ctx, 116, 132, 104, 24, 8); ctx.fill();
+    ctx.lineWidth = 1.2; ctx.strokeStyle = '#f59b23'; ctx.stroke();
+    drawFlame(ctx, 130, 144, 15, '#f59b23', '#ffd23e');
+    ctx.font = 'bold 12.5px Verdana, sans-serif';
+    ctx.fillStyle = '#ffd9a0';
+    ctx.fillText(`BURN 2 ×${state.warden.burnTurns}`, 142, 145);
   }
   ctx.restore();
   // The Warden's hand: face-down cards fanned across the top.
@@ -408,13 +463,13 @@ function drawPlayerZone(ctx, state, view) {
   ctx.font = 'bold 16px Georgia, serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('YOU — FLAME KEEPER', 104, 492);
-  drawLifeBar(ctx, 104, 506, 150, state.player.life, '#d98a2b');
+  drawLifeBar(ctx, 104, 506, 150, state.player.life, state.player.maxLife, '#d98a2b');
   ctx.font = 'bold 24px Georgia, serif';
   ctx.fillStyle = '#ffd9a0';
   ctx.fillText(`${state.player.life}`, 262, 516);
   ctx.font = '11px Verdana, sans-serif';
   ctx.fillStyle = '#cbbfa4';
-  ctx.fillText(`/ ${MAX_LIFE}`, 292, 518);
+  ctx.fillText(`/ ${state.player.maxLife}`, 292, 518);
   if (state.player.block > 0) {
     ctx.font = 'bold 14px Verdana, sans-serif';
     ctx.fillStyle = '#aebfe0';
@@ -489,6 +544,7 @@ function drawPlayerZone(ctx, state, view) {
 
 function drawTitle(ctx, view) {
   drawTable(ctx);
+  drawEmbers(ctx, view.time);
   ctx.save();
   ctx.fillStyle = 'rgba(4,10,6,0.45)';
   ctx.fillRect(0, 0, VIEW.width, VIEW.height);
@@ -517,7 +573,7 @@ function drawTitle(ctx, view) {
   ctx.font = '13.5px Verdana, sans-serif';
   ctx.fillStyle = '#a99a76';
   ctx.fillText('Mouse: click a card to play it · Keys 1–8 choose a card · Enter ends the turn · R restarts · M mutes', 640, 664);
-  ctx.fillText('Life 30 vs 30 · Ember grows each turn · First flame out loses', 640, 690);
+  ctx.fillText('Life 30 vs 34 · Ember grows each turn · First flame out loses', 640, 690);
   ctx.restore();
 }
 
@@ -558,8 +614,10 @@ export function createRenderer(canvas) {
       return;
     }
     drawTable(ctx);
+    drawEmbers(ctx, view.time);
     drawWardenZone(ctx, state);
     drawCentre(ctx, state, view.fx);
+    if (view.fx) drawImpactSparks(ctx, view.fx.playerCardAge);
     drawLog(ctx, state);
     drawPlayerZone(ctx, state, view);
     if (view.screen === SCREEN.WON) drawEndOverlay(ctx, state, true);

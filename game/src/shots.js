@@ -47,10 +47,27 @@ export function stageShot(name, random) {
       if (state.phase === PHASE.PLAYER) battle.endTurn();
     }
     if (state.phase === PHASE.PLAYER) {
-      const strike = state.hand.findIndex((card) => card.kind === 'strike' && card.cost <= state.ember);
-      const any = state.hand.findIndex((card) => card.cost <= state.ember);
-      const pick = strike >= 0 ? strike : any;
-      if (pick >= 0) battle.playCard(pick);
+      // Final beats: eat the Warden's Block with the weakest strike, then land the
+      // finisher — prefer Ember Strike, so the frame shows real damage in the air
+      // AND the Warden ignited (BURN badge).
+      const strikes = () => state.hand
+        .map((card, i) => ({ card, i }))
+        .filter(({ card }) => card.kind === 'strike' && card.cost <= state.ember);
+      if (state.warden.block > 0) {
+        const weak = strikes().sort((a, b) => a.card.value - b.card.value)[0];
+        if (weak) battle.playCard(weak.i);
+      }
+      if (state.phase === PHASE.PLAYER) {
+        const before = state.warden.life;
+        const list = strikes();
+        const ember = list.find(({ card }) => card.id === 'emberStrike');
+        const best = list.sort((a, b) => b.card.value - a.card.value)[0];
+        const pick = ember ?? best;
+        if (pick) {
+          battle.playCard(pick.i);
+          state.shotDamage = before - state.warden.life;
+        }
+      }
     }
     return { screen: SCREEN.PLAY, battle };
   }
