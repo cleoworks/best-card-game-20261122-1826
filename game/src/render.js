@@ -187,7 +187,7 @@ export function drawCard(ctx, card, x, y, w = CARD_W, h = CARD_H, opts = {}) {
   ctx.fillText(String(card.cost), 24, 25);
   // Name.
   ctx.fillStyle = INK;
-  ctx.font = 'bold 15.5px Georgia, serif';
+  ctx.font = 'bold 14px Georgia, serif';
   ctx.fillText(card.name, CARD_W / 2, 100);
   // Big value with its unit word.
   const unit = { strike: 'DAMAGE', guard: 'BLOCK', mend: 'HEAL', kindle: 'EMBER', gambit: 'DRAW' }[card.kind] ?? '';
@@ -260,12 +260,16 @@ function drawTable(ctx) {
   ctx.strokeRect(20, 20, VIEW.width - 40, VIEW.height - 40);
 }
 
-/** Where each hand card sits; shared with input so clicks land on the drawn cards. */
+/** Where each hand card sits; shared with input so clicks land on the drawn cards. The hand
+ * lives between the ember pips on the left and the End Turn button on the right. */
 export function handCardRect(state, index) {
+  const HAND_LEFT = 276;
+  const HAND_RIGHT = 1044;
   const count = state.hand.length;
-  const spacing = Math.min(152, (VIEW.width - 360) / Math.max(1, count));
+  const avail = HAND_RIGHT - HAND_LEFT;
+  const spacing = count > 1 ? Math.min(150, (avail - CARD_W) / (count - 1)) : 0;
   const total = spacing * (count - 1) + CARD_W;
-  const startX = (VIEW.width - total) / 2 + 30;
+  const startX = HAND_LEFT + (avail - total) / 2;
   return { x: startX + index * spacing, y: HAND_Y, w: CARD_W, h: CARD_H };
 }
 
@@ -282,13 +286,14 @@ function drawWardenZone(ctx, state) {
   ctx.font = 'bold 19px Georgia, serif';
   ctx.textAlign = 'left'; ctx.textBaseline = 'middle';
   ctx.fillText('THE ASHEN WARDEN', 116, 60);
-  drawLifeBar(ctx, 116, 78, 190, state.warden.life, '#b0483e');
+  drawLifeBar(ctx, 116, 78, 180, state.warden.life, '#b0483e');
   ctx.font = 'bold 25px Georgia, serif';
   ctx.fillStyle = '#ffb3a3';
-  ctx.fillText(`${state.warden.life}`, 316, 88);
+  ctx.fillText(`${state.warden.life}`, 304, 88);
+  const lifeWidth = ctx.measureText(`${state.warden.life}`).width;
   ctx.font = '12px Verdana, sans-serif';
   ctx.fillStyle = '#cbbfa4';
-  ctx.fillText(`/ ${MAX_LIFE} LIFE`, 348, 90);
+  ctx.fillText(`/ ${MAX_LIFE} LIFE`, 304 + lifeWidth + 6, 90);
   if (state.warden.block > 0) {
     ctx.font = 'bold 14px Verdana, sans-serif';
     ctx.fillStyle = '#aebfe0';
@@ -423,7 +428,7 @@ function drawPlayerZone(ctx, state, view) {
   ctx.textAlign = 'left';
   ctx.fillText('EMBER', 40, 592);
   for (let i = 0; i < MAX_EMBER_CAP; i += 1) {
-    const x = 46 + i * 27;
+    const x = 44 + i * 24;
     const y = 614;
     ctx.beginPath();
     ctx.arc(x, y, 10, 0, Math.PI * 2);
