@@ -127,7 +127,7 @@ export function createBattle(random) {
       state.player.block += card.value;
       logLine(`You play ${card.name}: +${card.value} Block.`);
     } else if (card.kind === 'mend') {
-      const healed = Math.min(MAX_LIFE - state.player.life, card.value);
+      const healed = Math.min(state.player.maxLife - state.player.life, card.value);
       state.player.life += healed;
       logLine(`You play ${card.name}: heal ${healed} life.`);
     } else if (card.kind === 'kindle') {
@@ -163,7 +163,7 @@ export function createBattle(random) {
       state.warden.block += intent.value;
       logLine(`Warden Ward: +${intent.value} Block.`);
     } else if (intent.kind === 'stoke') {
-      const healed = Math.min(MAX_LIFE - state.warden.life, intent.value);
+      const healed = Math.min(state.warden.maxLife - state.warden.life, intent.value);
       state.warden.life += healed;
       state.warden.strength += 1;
       logLine(`Warden Stoke: heals ${healed}, grows stronger (+1 damage).`);
