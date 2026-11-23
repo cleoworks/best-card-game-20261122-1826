@@ -255,7 +255,7 @@ function drawImpactSparks(ctx, age) {
   ctx.strokeStyle = '#ffcf6e';
   ctx.lineWidth = 2.5;
   ctx.lineCap = 'round';
-  const cx = 566;
+  const cx = 536;
   const cy = 330;
   for (let i = 0; i < 10; i += 1) {
     const angle = (i / 10) * Math.PI * 2 + 0.35;
@@ -382,16 +382,93 @@ function drawWardenZone(ctx, state) {
   }
 }
 
+/** The Ashen Warden itself, standing mid-panel: hooded ash-grey figure, ember crown,
+ * glowing eyes, a flame for a heart. Drawn from primitives — no external assets. */
+function drawWardenFigure(ctx, state) {
+  const cx = 640;
+  ctx.save();
+  if (state.warden.life <= 0) ctx.globalAlpha = 0.35; // Ashen indeed, once it falls.
+  // Ember glow behind the figure.
+  const glow = ctx.createRadialGradient(cx, 335, 10, cx, 335, 125);
+  glow.addColorStop(0, 'rgba(245,155,35,0.20)');
+  glow.addColorStop(1, 'rgba(245,155,35,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - 125, 210, 250, 250);
+  // Ground shadow.
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath(); ctx.ellipse(cx, 448, 80, 10, 0, 0, Math.PI * 2); ctx.fill();
+  // Robe: shoulders narrow, hem wide, ash gradient.
+  const robe = ctx.createLinearGradient(0, 270, 0, 450);
+  robe.addColorStop(0, '#484f58');
+  robe.addColorStop(1, '#202329');
+  ctx.fillStyle = robe;
+  ctx.beginPath();
+  ctx.moveTo(cx - 78, 448);
+  ctx.bezierCurveTo(cx - 66, 380, cx - 52, 330, cx - 46, 294);
+  ctx.bezierCurveTo(cx - 30, 276, cx + 30, 276, cx + 46, 294);
+  ctx.bezierCurveTo(cx + 52, 330, cx + 66, 380, cx + 78, 448);
+  ctx.bezierCurveTo(cx + 40, 456, cx - 40, 456, cx - 78, 448);
+  ctx.fill();
+  // Sleeves hanging at its sides.
+  ctx.fillStyle = '#2b2f36';
+  for (const dir of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(cx + dir * 44, 296);
+    ctx.bezierCurveTo(cx + dir * 66, 318, cx + dir * 72, 356, cx + dir * 62, 396);
+    ctx.bezierCurveTo(cx + dir * 50, 402, cx + dir * 42, 398, cx + dir * 40, 380);
+    ctx.bezierCurveTo(cx + dir * 36, 348, cx + dir * 38, 318, cx + dir * 44, 296);
+    ctx.fill();
+  }
+  // Gold trim down the robe's front.
+  ctx.strokeStyle = 'rgba(217,164,65,0.55)';
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 7, 292); ctx.lineTo(cx - 13, 446); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx + 7, 292); ctx.lineTo(cx + 13, 446); ctx.stroke();
+  // Hood.
+  ctx.fillStyle = '#333842';
+  ctx.beginPath();
+  ctx.moveTo(cx - 37, 292);
+  ctx.bezierCurveTo(cx - 42, 238, cx - 26, 214, cx, 214);
+  ctx.bezierCurveTo(cx + 26, 214, cx + 42, 238, cx + 37, 292);
+  ctx.bezierCurveTo(cx + 22, 302, cx - 22, 302, cx - 37, 292);
+  ctx.fill();
+  ctx.lineWidth = 1.5; ctx.strokeStyle = 'rgba(217,164,65,0.6)'; ctx.stroke();
+  // Face: a dark void with two ember eyes.
+  ctx.fillStyle = '#0e1013';
+  ctx.beginPath(); ctx.ellipse(cx, 264, 20, 24, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.save();
+  ctx.shadowColor = '#ff9d2e';
+  ctx.shadowBlur = 9;
+  ctx.fillStyle = '#ffb347';
+  ctx.beginPath(); ctx.arc(cx - 8, 261, 3.4, 0, Math.PI * 2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx + 8, 261, 3.4, 0, Math.PI * 2); ctx.fill();
+  ctx.restore();
+  // Ember crown above the hood.
+  drawFlame(ctx, cx - 25, 210, 20, '#e8622c');
+  drawFlame(ctx, cx, 198, 27, '#f59b23');
+  drawFlame(ctx, cx + 25, 210, 20, '#e8622c');
+  // A flame for a heart.
+  drawFlame(ctx, cx, 356, 44, '#e8622c');
+  // When ignited, flames lick at the robe's hem too.
+  if (state.warden.burnTurns > 0) {
+    drawFlame(ctx, cx - 62, 424, 27, '#e8622c');
+    drawFlame(ctx, cx + 62, 424, 27, '#e8622c');
+    drawFlame(ctx, cx + 30, 440, 21, '#f59b23');
+  }
+  ctx.restore();
+}
+
 function drawCentre(ctx, state, fx) {
-  // Played cards in the middle of the table.
+  // Played cards flank the Warden in the middle of the table.
   ctx.save();
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
   roundRect(ctx, 356, 208, 568, 252, 16); ctx.fill();
   ctx.lineWidth = 1.2; ctx.strokeStyle = 'rgba(217,164,65,0.35)'; ctx.stroke();
   ctx.restore();
+  drawWardenFigure(ctx, state);
   if (state.lastPlayerCard) {
     const pop = fx && fx.playerCardAge < 0.35 ? 1 + (0.35 - fx.playerCardAge) * 0.25 : 1;
-    drawCard(ctx, state.lastPlayerCard, 420, 238, CARD_W * pop, CARD_H * pop, { lift: true });
+    drawCard(ctx, state.lastPlayerCard, 378, 238, CARD_W * pop, CARD_H * pop, { lift: true });
   }
   if (state.lastWardenCard) {
     const asCard = {
@@ -403,17 +480,15 @@ function drawCentre(ctx, state, fx) {
       color: '#6e2430',
       text: state.lastWardenCard.kind === 'ward' ? 'The Warden wards itself.' : state.lastWardenCard.kind === 'stoke' ? 'The Warden stokes its ash.' : 'The Warden strikes.',
     };
-    drawCard(ctx, asCard, 706, 238, CARD_W, CARD_H, { lift: true });
+    drawCard(ctx, asCard, 762, 238, CARD_W, CARD_H, { lift: true });
   }
   if (!state.lastPlayerCard && !state.lastWardenCard) {
     ctx.save();
-    ctx.fillStyle = 'rgba(243,230,200,0.5)';
-    ctx.font = 'italic 19px Georgia, serif';
+    ctx.fillStyle = 'rgba(243,230,200,0.55)';
+    ctx.font = 'italic 15px Georgia, serif';
     ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('The table awaits the first card.', 640, 334);
+    ctx.fillText('The table awaits the first card.', 640, 472);
     ctx.restore();
-  } else {
-    drawFlame(ctx, 640, 330, 54, GOLD, '#ffdf7e');
   }
   // Floating combat text.
   if (fx) {
